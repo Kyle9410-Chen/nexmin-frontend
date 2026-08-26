@@ -29,7 +29,7 @@ describe("ProtectedRoute", () => {
     renderGatedApp();
 
     expect(
-      screen.getByRole("heading", { name: "Sign in to SDC Manager" }),
+      screen.getByRole("heading", { name: "Sign in to Nexmin" }),
     ).toBeInTheDocument();
     // Rendering the gate *instead of* the route is what keeps protected
     // queries from firing and 401ing.
@@ -44,7 +44,7 @@ describe("ProtectedRoute", () => {
 
     expect(screen.getByText("members only")).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "Sign in to SDC Manager" }),
+      screen.queryByRole("heading", { name: "Sign in to Nexmin" }),
     ).not.toBeInTheDocument();
   });
 

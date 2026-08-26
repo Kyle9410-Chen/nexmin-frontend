@@ -160,7 +160,7 @@ export default function FeatureGuide() {
       <div>
         <h1 className="text-2xl font-semibold">Help</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          What SDC Manager can do today.
+          What Nexmin can do today.
           {payload &&
             ` You are signed in as ${payload.email ?? "an unknown account"}, with ${
               isAdmin ? "admin" : "member"

@@ -14,7 +14,7 @@ describe("LoginDialog", () => {
     renderWithProviders(<LoginDialog />, { withAuth: true });
 
     expect(
-      screen.getByRole("heading", { name: "Sign in to SDC Manager" }),
+      screen.getByRole("heading", { name: "Sign in to Nexmin" }),
     ).toBeInTheDocument();
     // No close affordance: there is nothing behind the dialog to reach.
     expect(
@@ -23,7 +23,7 @@ describe("LoginDialog", () => {
 
     await userEvent.keyboard("{Escape}");
     expect(
-      screen.getByRole("heading", { name: "Sign in to SDC Manager" }),
+      screen.getByRole("heading", { name: "Sign in to Nexmin" }),
     ).toBeInTheDocument();
   });
 

@@ -11,7 +11,7 @@ export default function LoginGate() {
     <div className="flex min-h-screen flex-col">
       <header className="bg-background sticky top-0 z-10 w-full border-b">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center px-4 md:px-6">
-          <span className="font-semibold whitespace-nowrap">SDC Manager</span>
+          <span className="font-semibold whitespace-nowrap">Nexmin</span>
         </div>
       </header>
 

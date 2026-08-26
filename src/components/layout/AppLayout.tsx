@@ -44,7 +44,7 @@ export default function AppLayout() {
       <header className="bg-background sticky top-0 z-10 w-full border-b">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-4 px-4 md:px-6">
           <NavLink to="/" className="font-semibold whitespace-nowrap">
-            SDC Manager
+            Nexmin
           </NavLink>
 
           <nav className="flex items-center gap-1 overflow-x-auto">

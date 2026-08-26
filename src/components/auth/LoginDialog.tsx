@@ -30,7 +30,7 @@ export default function LoginDialog() {
         className="sm:max-w-md"
       >
         <DialogHeader>
-          <DialogTitle>Sign in to SDC Manager</DialogTitle>
+          <DialogTitle>Sign in to Nexmin</DialogTitle>
           <DialogDescription>
             Sign in with the Google account that is on the club mailing list.
             Membership of that list is what grants access — nothing else needs

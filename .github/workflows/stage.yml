@@ -149,5 +149,5 @@ jobs:
           build-args: |
             VITE_BACKEND_BASE_URL=${{ env.VITE_BACKEND_BASE_URL }}
           tags: |
-            ${{ vars.DOCKER_IMAGE || 'umineko9410/sdc-manager-frontend' }}:stage
-            ${{ vars.DOCKER_IMAGE || 'umineko9410/sdc-manager-frontend' }}:${{ github.sha }}
+            ${{ vars.DOCKER_IMAGE || 'umineko9410/nexmin-frontend' }}:stage
+            ${{ vars.DOCKER_IMAGE || 'umineko9410/nexmin-frontend' }}:${{ github.sha }}

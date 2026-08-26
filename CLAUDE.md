@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Frontend for SDC club management. It talks to **`../sdc-manager-backend`** (Go, `nycu-sdc/club-manager`) — read that repo's `CLAUDE.md` before changing anything in `src/lib/request/`, since the error shape and auth model come from there.
+Frontend for SDC club management. It talks to **`../nexmin-backend`** (Go, `Kyle9410-Chen/nexmin-backend`) — read that repo's `CLAUDE.md` before changing anything in `src/lib/request/`, since the error shape and auth model come from there.
 
-**The contract lives in `../sdc-manager-backend/docs/api`** — TypeSpec sources under `service/*.tsp`, compiled to OpenAPI. That repo's rule is that every endpoint change updates them in the same commit, so read `user.tsp` / `group.tsp` before writing a request function rather than reverse-engineering the Go handlers. `make preview` there serves Swagger UI on :8090. The spec is not infallible: `GroupResponse.aliases` is declared `string[]`, but a Go nil slice still marshals to `null`, which is why this repo types it `string[] | null` — see the alias trap below.
+**The contract lives in `../nexmin-backend/docs/api`** — TypeSpec sources under `service/*.tsp`, compiled to OpenAPI. That repo's rule is that every endpoint change updates them in the same commit, so read `user.tsp` / `group.tsp` before writing a request function rather than reverse-engineering the Go handlers. `make preview` there serves Swagger UI on :8090. The spec is not infallible: `GroupResponse.aliases` is declared `string[]`, but a Go nil slice still marshals to `null`, which is why this repo types it `string[] | null` — see the alias trap below.
 
 The backend exposes a health probe, the Google OAuth session routes, and the mailing list routes. This app is wired to those:
 
@@ -87,13 +87,13 @@ pnpm vitest run -t "attaches the bearer token"   # single test by name
 
 **pnpm, not npm** — matches `clustron-frontend` and `NYCU-SDC.github.io`. `pnpm-workspace.yaml` carries `allowBuilds: esbuild: true`; without it pnpm 10 skips esbuild's postinstall.
 
-To run against a real backend, start Postgres and the Go service per `../sdc-manager-backend/CLAUDE.md`, then `cp example.env .env.devlocal`.
+To run against a real backend, start Postgres and the Go service per `../nexmin-backend/CLAUDE.md`, then `cp example.env .env.devlocal`.
 
 ## Env files
 
 `VITE_BACKEND_BASE_URL` is the important one. `src/lib/request/api.ts` **throws at import time** if it is missing, so every entry path needs it — including tests.
 
-**The dev server port is load-bearing for OAuth.** Vite serves on 5173 (`vite.config.ts`), but the backend's committed `config.example.yaml` ships `http://localhost:3000`. The callback redirects to exactly `frontend_url`, so a local `../sdc-manager-backend/config.yaml` needs **both** `frontend_url: "http://localhost:5173"` and `allow_origins: ["http://localhost:5173"]`, or sign-in bounces to a dead port and every request is blocked by CORS. Sign-in also needs `google_oauth_client_id`/`_secret` and a non-empty `google_group.login_group` — an empty login group **refuses everyone** rather than falling open — and the Cloud Console redirect URI must be exactly `{base_url}/api/auth/google/callback`.
+**The dev server port is load-bearing for OAuth.** Vite serves on 5173 (`vite.config.ts`), but the backend's committed `config.example.yaml` ships `http://localhost:3000`. The callback redirects to exactly `frontend_url`, so a local `../nexmin-backend/config.yaml` needs **both** `frontend_url: "http://localhost:5173"` and `allow_origins: ["http://localhost:5173"]`, or sign-in bounces to a dead port and every request is blocked by CORS. Sign-in also needs `google_oauth_client_id`/`_secret` and a non-empty `google_group.login_group` — an empty login group **refuses everyone** rather than falling open — and the Cloud Console redirect URI must be exactly `{base_url}/api/auth/google/callback`.
 
 - `example.env` — committed template.
 - `.env.devlocal` — gitignored; what `pnpm dev` actually reads (the `--mode devlocal` flag).
@@ -101,9 +101,9 @@ To run against a real backend, start Postgres and the Go service per `../sdc-man
 
 ## CI
 
-Three GitHub Actions workflows under `.github/workflows/`, mirroring `../sdc-manager-backend`'s: `pull-request.yml` (on PRs), `main.yml` (push to `main`) and `stage.yml` (push of a `v*` tag). All three run the same four jobs — `Lint` (`pnpm lint`), `Format` (`pnpm format:check`), `Test` (`pnpm test:coverage`), then `Build` (`pnpm build`, so `tsc -b` is the typecheck gate). The backend chains its jobs strictly; here `Lint` and `Format` run in parallel because both are cheap, and `Test` takes `needs: [Lint, Format]`. `**.md` is in `paths-ignore` except on `stage.yml`, where a tag push has no useful path filter.
+Three GitHub Actions workflows under `.github/workflows/`, mirroring `../nexmin-backend`'s: `pull-request.yml` (on PRs), `main.yml` (push to `main`) and `stage.yml` (push of a `v*` tag). All three run the same four jobs — `Lint` (`pnpm lint`), `Format` (`pnpm format:check`), `Test` (`pnpm test:coverage`), then `Build` (`pnpm build`, so `tsc -b` is the typecheck gate). The backend chains its jobs strictly; here `Lint` and `Format` run in parallel because both are cheap, and `Test` takes `needs: [Lint, Format]`. `**.md` is in `paths-ignore` except on `stage.yml`, where a tag push has no useful path filter.
 
-`main.yml` and `stage.yml` add a `Build-Image` job that builds `Dockerfile` and pushes `:dev` / `:stage` plus `:${{ github.sha }}`. It is **guarded by `vars.DOCKER_IMAGE_ENABLED == 'true'`**, exactly like the backend's, so the pipeline is green — the job skipped, not failed — until `DOCKER_REGISTRY_USERNAME` / `DOCKER_REGISTRY_TOKEN` exist. `vars.DOCKER_IMAGE` overrides the default `umineko9410/sdc-manager-frontend`. There is deliberately **no deploy step**: clustron-frontend's n8n webhook, PR preview domains and `Extract-PRbody` are NYCU-SDC org infrastructure this account does not have, and the backend stops at build-and-push too.
+`main.yml` and `stage.yml` add a `Build-Image` job that builds `Dockerfile` and pushes `:dev` / `:stage` plus `:${{ github.sha }}`. It is **guarded by `vars.DOCKER_IMAGE_ENABLED == 'true'`**, exactly like the backend's, so the pipeline is green — the job skipped, not failed — until `DOCKER_REGISTRY_USERNAME` / `DOCKER_REGISTRY_TOKEN` exist. `vars.DOCKER_IMAGE` overrides the default `umineko9410/nexmin-frontend`. There is deliberately **no deploy step**: clustron-frontend's n8n webhook, PR preview domains and `Extract-PRbody` are NYCU-SDC org infrastructure this account does not have, and the backend stops at build-and-push too.
 
 Two things that will bite:
 

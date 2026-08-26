@@ -1,1 +1,1 @@
-# sdc-manager-frontend
+# nexmin-frontend
