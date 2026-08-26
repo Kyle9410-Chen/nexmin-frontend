@@ -12,16 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import GroupRolePicker from "@/components/mailingList/GroupRolePicker";
 import { useAddRosterMember } from "@/hooks/useRosterMutations";
 import {
-  MEMBER_ROLE_OPTIONS,
   MemberRoleManager,
   MemberRoleMember,
   MemberRoleOwner,
@@ -35,13 +28,29 @@ export interface AddMemberDialogProps {
 
 function Body({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<MailingListMemberRole>(MemberRoleMember);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [roles, setRoles] = useState<Map<string, MailingListMemberRole>>(
+    () => new Map(),
+  );
 
   const { mutate: add, isPending } = useAddRosterMember();
 
-  // MANAGER and OWNER of the login group map onto this service's admin role, so
-  // this field is how administrative access is handed out.
-  const grantsAdmin = role === MemberRoleManager || role === MemberRoleOwner;
+  /** Nobody is on anything yet, so an unpicked role is simply MEMBER. */
+  function roleFor(key: string): MailingListMemberRole {
+    return roles.get(key) ?? MemberRoleMember;
+  }
+
+  // MANAGER and OWNER of the *login* group map onto this service's admin role.
+  // Which list that is, is the backend's business, so the warning covers any
+  // Manager or Owner pick rather than pretending to know.
+  const grantsAdmin = [...selected].some(
+    (key) =>
+      roleFor(key) === MemberRoleManager || roleFor(key) === MemberRoleOwner,
+  );
+
+  function setGroupRole(key: string, next: MailingListMemberRole) {
+    setRoles((prev) => new Map(prev).set(key, next));
+  }
 
   function handleAdd() {
     const trimmed = email.trim();
@@ -52,7 +61,16 @@ function Body({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
       return;
     }
 
-    add({ email: trimmed, role }, { onSuccess: () => onOpenChange(false) });
+    add(
+      {
+        email: trimmed,
+        // The login group is written whether or not it is named, so this is only
+        // the lists picked here — including, when it is ticked, the login group
+        // itself, which is how a role is set on it.
+        groups: [...selected].map((key) => ({ key, role: roleFor(key) })),
+      },
+      { onSuccess: () => onOpenChange(false) },
+    );
   }
 
   return (
@@ -79,29 +97,24 @@ function Body({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="add-member-role">Role on the mailing list</Label>
-          <Select
-            value={role}
-            onValueChange={(value) => setRole(value as MailingListMemberRole)}
-          >
-            <SelectTrigger id="add-member-role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MEMBER_ROLE_OPTIONS.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Mailing lists</Label>
+          <p className="text-muted-foreground text-sm">
+            Optional — they can be added to these later from the roster.
+          </p>
+          <GroupRolePicker
+            className="max-h-[35vh] overflow-y-auto rounded-md border"
+            selected={selected}
+            onSelectedChange={setSelected}
+            roleFor={roleFor}
+            onRoleChange={setGroupRole}
+          />
         </div>
 
         {grantsAdmin && (
           <p className="text-destructive flex items-start gap-2 text-sm">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            Manager and Owner of the club list are administrators of this app:
-            they can edit anyone's groups and add or remove members.
+            Manager and Owner of the club login list are administrators of this
+            app: they can edit anyone's groups and add or remove members.
           </p>
         )}
       </div>

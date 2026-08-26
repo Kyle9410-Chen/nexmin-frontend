@@ -38,9 +38,10 @@ export default function RemoveMemberDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Remove {who} from the club?</AlertDialogTitle>
           <AlertDialogDescription>
-            They come off the club mailing list, so they stop appearing on the
-            roster and can no longer sign in. Their profile is kept, and comes
-            back if they are added again.
+            They come off every club mailing list — not just the one that gates
+            sign-in — so they stop appearing on the roster, can no longer sign
+            in, and stop receiving the club's mail. Their profile is kept, and
+            comes back if they are added again.
             {isSelf &&
               " This is your own account: you will not be able to sign back in, and only a Google Workspace admin can restore your access."}
           </AlertDialogDescription>

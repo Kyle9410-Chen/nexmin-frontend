@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,28 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { SectionHeaderButton } from "@/components/customUI/SectionHeader";
-import { useMailingListGroups } from "@/hooks/useMailingListGroups";
+import GroupRolePicker from "@/components/mailingList/GroupRolePicker";
 import { useMailingListMembersFor } from "@/hooks/useMailingListMembers";
 import {
   useUpdateMemberGroups,
   type GroupRoleChange,
 } from "@/hooks/useMailingListMemberMutations";
-import { useKeySet } from "@/hooks/useKeySet";
-import { bySection } from "@/lib/groupSections";
-import { getErrMessage } from "@/lib/errors";
 import { roleInGroup } from "@/lib/memberKey";
-import { cn } from "@/lib/utils";
 import {
-  MEMBER_ROLE_OPTIONS,
   MemberRoleMember,
   type MailingListMemberRole,
 } from "@/types/mailingList";
@@ -59,9 +45,7 @@ function Body({
   const [roles, setRoles] = useState<Map<string, MailingListMemberRole>>(
     () => new Map(),
   );
-  const { has: isCollapsed, toggle: toggleCollapse } = useKeySet();
 
-  const { data, isPending, error } = useMailingListGroups();
   const { mutate: save, isPending: isSaving } = useUpdateMemberGroups();
 
   // The roster carries keys but no roles, so they are read from each list this
@@ -74,7 +58,6 @@ function Body({
     ]),
   );
 
-  const sections = bySection(data?.items ?? []);
   const current = new Set(entry.groups);
 
   /** What the control shows: the user's pick, else the real role, else MEMBER. */
@@ -102,26 +85,6 @@ function Body({
 
   const isDirty = add.length > 0 || remove.length > 0 || update.length > 0;
 
-  function toggleGroup(key: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(key)) next.add(key);
-      return next;
-    });
-  }
-
-  /** Whole-section toggle: clears the section when it is already fully selected. */
-  function toggleSectionAll(keys: string[], allSelected: boolean) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const key of keys) {
-        if (allSelected) next.delete(key);
-        else next.add(key);
-      }
-      return next;
-    });
-  }
-
   function setRole(key: string, role: MailingListMemberRole) {
     setRoles((prev) => new Map(prev).set(key, role));
   }
@@ -137,104 +100,13 @@ function Body({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="max-h-[50vh] overflow-y-auto">
-        {error ? (
-          <p className="text-destructive py-6 text-center text-sm">
-            {getErrMessage(error, "Failed to load mailing lists")}
-          </p>
-        ) : isPending ? (
-          <div className="flex flex-col gap-2 py-2">
-            {Array.from({ length: 5 }, (_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
-            ))}
-          </div>
-        ) : (
-          sections.map((section) => {
-            const keys = section.groups.map((group) => group.email);
-            const chosen = keys.filter((key) => selected.has(key)).length;
-            const allChosen = chosen === keys.length;
-
-            return (
-              <Fragment key={section.key}>
-                <div className="bg-muted/50 sticky top-0 flex items-center gap-2 px-2 py-2">
-                  <SectionHeaderButton
-                    name={section.name}
-                    count={section.groups.length}
-                    expanded={!isCollapsed(section.key)}
-                    onToggle={() => toggleCollapse(section.key)}
-                    className="min-w-0 flex-1"
-                  />
-                  {/* Indeterminate is set imperatively: it is a DOM property
-                      with no HTML attribute behind it. */}
-                  <input
-                    type="checkbox"
-                    className="accent-primary size-4"
-                    aria-label={`Select all in ${section.name}`}
-                    checked={allChosen}
-                    ref={(el) => {
-                      if (el) el.indeterminate = chosen > 0 && !allChosen;
-                    }}
-                    onChange={() => toggleSectionAll(keys, allChosen)}
-                  />
-                </div>
-
-                {!isCollapsed(section.key) && (
-                  <div className="grid gap-1 px-2 py-2">
-                    {section.groups.map((group) => {
-                      const key = group.email;
-                      const isOn = selected.has(key);
-                      const name = group.displayName || key;
-
-                      return (
-                        <div
-                          key={group.id}
-                          className="hover:bg-accent/50 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-                        >
-                          <label className="flex min-w-0 flex-1 items-center gap-2">
-                            <input
-                              type="checkbox"
-                              className="accent-primary size-4"
-                              checked={isOn}
-                              onChange={() => toggleGroup(key)}
-                            />
-                            <span className="min-w-0 flex-1 truncate">
-                              {name}
-                            </span>
-                          </label>
-
-                          {/* On an unchecked group this is the role they would
-                              be added with, so it stays usable but muted. */}
-                          <Select
-                            value={roleFor(key)}
-                            onValueChange={(value) =>
-                              setRole(key, value as MailingListMemberRole)
-                            }
-                          >
-                            <SelectTrigger
-                              size="sm"
-                              aria-label={`Role in ${name}`}
-                              className={cn("w-32", !isOn && "opacity-60")}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {MEMBER_ROLE_OPTIONS.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </Fragment>
-            );
-          })
-        )}
-      </div>
+      <GroupRolePicker
+        className="max-h-[50vh] overflow-y-auto"
+        selected={selected}
+        onSelectedChange={setSelected}
+        roleFor={roleFor}
+        onRoleChange={setRole}
+      />
 
       <DialogFooter>
         <Button variant="ghost" onClick={() => onOpenChange(false)}>

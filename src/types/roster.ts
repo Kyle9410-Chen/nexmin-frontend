@@ -37,8 +37,21 @@ export interface RosterResponse {
   totalItems: number;
 }
 
+/** One mailing list to put a new member on, and the role to give them there. */
+export interface AddRosterMemberGroup {
+  /**
+   * Bare group name, full address, alias or immutable ID — every spelling the
+   * group routes accept. A key naming no list in the account is rejected with
+   * 400, **before anything is written**.
+   */
+  key: string;
+  /** The role on **that list**, not this service's. Omit for MEMBER. */
+  role?: MailingListMemberRole;
+}
+
 /**
- * POST /api/users — add someone to the club.
+ * POST /api/users — add someone to the club, and to whichever lists they should
+ * be on.
  *
  * There is no local account to create: the login mailing list decides who
  * exists, so adding them to it is the whole operation, and a local row appears
@@ -47,9 +60,17 @@ export interface RosterResponse {
 export interface AddRosterMemberInput {
   email: string;
   /**
-   * The role on the **login mailing list**, not this service's role. Omit for
-   * MEMBER. `MANAGER` and `OWNER` there map onto this service's `admin`, so
-   * either one **grants administrative access**.
+   * The lists to put them on **beyond the login group**, which is always
+   * written and does not have to be named — callers do not need to know its
+   * address. Omit, or send `[]`, for the login group alone.
+   *
+   * Naming the login group anyway is how a role is set on it: `MANAGER` or
+   * `OWNER` there maps onto this service's `admin`, so listing it that way
+   * **grants administrative access**. Which list that is stays the backend's
+   * business, so this side cannot tell which entry does it.
+   *
+   * Listing one list twice, or a key that resolves to nothing, is a 400 — and
+   * every key is checked before the first write, so a typo costs nothing.
    */
-  role?: MailingListMemberRole;
+  groups?: AddRosterMemberGroup[];
 }

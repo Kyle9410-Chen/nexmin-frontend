@@ -374,47 +374,6 @@ describe("RosterTable", () => {
     ).toBeInTheDocument();
   });
 
-  it("translates Google's wording for an address that is not on the list", async () => {
-    setAccessToken(makeFakeJwt({ role: "admin" }));
-    answerRoster([BOB]);
-    server.use(
-      http.delete(`${BASE}/api/users/:email`, () =>
-        HttpResponse.json(
-          {
-            title: "Bad Request",
-            status: 400,
-            detail: "Missing required field: memberKey",
-          },
-          {
-            status: 400,
-            headers: { "Content-Type": "application/problem+json" },
-          },
-        ),
-      ),
-    );
-
-    renderWithProviders(<RosterTable />);
-
-    await userEvent.click(
-      (
-        await screen.findAllByRole("button", {
-          name: `Remove ${BOB.email} from the club`,
-        })
-      )[0],
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Remove" }),
-    );
-
-    expect(
-      await screen.findByText("That address is not on the club mailing list."),
-    ).toBeInTheDocument();
-    // Rolled back, so they are still listed.
-    await waitFor(() =>
-      expect(screen.getAllByText(BOB.email)).not.toHaveLength(0),
-    );
-  });
-
   it("surfaces the problem+json detail when the roster is refused", async () => {
     server.use(
       http.get(`${BASE}/api/users`, () =>
