@@ -1,0 +1,19 @@
+# Keep the build context small; node_modules is reinstalled in the builder stage
+# from the lockfile anyway.
+node_modules
+dist
+coverage
+
+.git
+.github
+.idea
+.vscode
+
+# Local settings never belong in an image. .env.test is deliberately not excluded:
+# it is committed on purpose, and `vite build` runs in mode "production" so the
+# image build never reads it.
+.env
+.env.devlocal
+*.bak
+
+*.md

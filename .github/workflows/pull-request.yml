@@ -1,0 +1,115 @@
+name: Frontend Lint, Test, and Build
+
+# Markdown-only changes do not need the Node toolchain.
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10.15.1"
+  # Vite inlines this at build time. Without it the bundle builds fine and then
+  # throws at load -- src/lib/request/api.ts refuses to import with no base URL.
+  # Set the repository variable once a real dev backend URL exists.
+  VITE_BACKEND_BASE_URL: ${{ vars.VITE_BACKEND_BASE_URL || 'http://localhost:8080' }}
+
+jobs:
+  # Lint and Format are both cheap and independent, so unlike the backend's strictly
+  # sequential chain they run in parallel and Test waits on both.
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      # Before setup-node: `cache: pnpm` needs pnpm already on PATH.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+  Format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+  Test:
+    needs: [Lint, Format]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # No env of its own: vitest runs in mode "test" and .env.test is committed.
+      - name: Test
+        run: pnpm test:coverage
+
+  Build:
+    needs: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `pnpm build` is `tsc -b && vite build`, so the typecheck is part of this.
+      - name: Build
+        run: pnpm build
