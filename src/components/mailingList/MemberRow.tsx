@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TableCell, TableRow } from "@/components/ui/table";
+import RoleBadge, { RoleIcon } from "@/components/customUI/RoleBadge";
 import { memberKeyOf } from "@/lib/memberKey";
 import {
   MEMBER_ROLE_OPTIONS,
@@ -52,20 +53,12 @@ function MemberIdentity({ member }: { member: MailingListMember }) {
   );
 }
 
-function roleLabel(role: string) {
-  return MEMBER_ROLE_OPTIONS.find((r) => r.id === role)?.label ?? role;
-}
-
 /** Identical on both breakpoints, so it lives in one place. */
 function RoleControl({ member, canEdit, onRoleChange }: MemberRowProps) {
   // No pending state: the new role is already on screen optimistically, so a
   // spinner over it would only hide the answer.
   if (!canEdit) {
-    return (
-      <span className="text-muted-foreground text-sm">
-        {roleLabel(member.role)}
-      </span>
-    );
+    return <RoleBadge role={member.role} />;
   }
 
   return (
@@ -74,10 +67,10 @@ function RoleControl({ member, canEdit, onRoleChange }: MemberRowProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="-ml-2 font-medium"
+          className="-ml-2 gap-1.5 px-2 font-medium"
           aria-label={`Change role for ${memberKeyOf(member)}`}
         >
-          {roleLabel(member.role)}
+          <RoleBadge role={member.role} />
           <ChevronDown className="size-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
@@ -92,6 +85,7 @@ function RoleControl({ member, canEdit, onRoleChange }: MemberRowProps) {
               if (member.role !== option.id) onRoleChange(member, option.id);
             }}
           >
+            <RoleIcon role={option.id} />
             {option.label}
           </DropdownMenuCheckboxItem>
         ))}

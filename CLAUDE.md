@@ -12,7 +12,6 @@ The backend exposes a health probe, the Google OAuth session routes, and the mai
 
 | Endpoint                                              | Auth          | Wired up in                                                                                                                      |
 | ----------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/healthz`                                    | open          | `lib/request/getHealthz.ts` → `hooks/useHealthz.ts` → `pages/Home.tsx`                                                           |
 | `GET /api/auth/google/login`                          | open          | `AuthProvider.login` — a full-page redirect, not a request function                                                              |
 | `POST /api/auth/refresh`                              | open          | `lib/request/refreshAuthToken.ts` → `AuthProvider`'s refresh timer                                                               |
 | `POST /api/auth/logout`                               | JWT           | `lib/request/logoutRequest.ts` → `AuthProvider.logout`                                                                           |
@@ -43,6 +42,8 @@ Both responses are envelopes, `{ items, totalItems }`, **not** `PaginatedRespons
 
 Group members carry `profile: { name, nickname, department } | null` — `null` meaning that address has never signed in here, which is deliberately distinct from a member who signed in and left the fields blank. `MemberRow` shows the name with the address beneath when there is one, and the bare address when there is not.
 
+**Roles render as `components/customUI/RoleBadge.tsx`, not as bare words.** MANAGER and MEMBER are near-identical at a glance — same initial, same length — so each role also carries an icon (crown / shield / person) and a colour, and `RoleIcon` puts the same icons in the picker so the choice and the result match. The badge keeps the word as text, which is what the tests match on. `MailingListMember.role` is a bare `string` on purpose, so an unrecognised value falls through to the raw value with no icon and no colour rather than borrowing the styling of a role it is not.
+
 `findGroupByKey` (exported from `hooks/useMailingListGroups.ts`) resolves a URL key back to its group, matching email, immutable ID and aliases case-insensitively, since the backend accepts any of them and compares with `strings.EqualFold`. The members page uses it only to title itself, and falls back to the raw key so a direct URL hit still renders.
 
 Everything beyond those is scaffolding waiting for a backend.
@@ -65,7 +66,7 @@ The roster reports **bare keys only** — no names, no sections — so an expand
 
 The contract-first `/users` panel and `src/mocks/` are **gone** — the backend shipped the real thing, and `types/user.ts` (`studentId`, `ADMIN`/`ORGANIZER`/`MEMBER`, `PaginatedResponse<User>`, the `POST`/`PUT`/`DELETE` proposal) described an API that will not exist. `src/mocks/server.ts` stays with an empty handler list because the whole test suite starts MSW through it; every test registers its own routes with `server.use(...)`. `components/customUI/PaginationControl.tsx` is currently unused but kept — nothing paginates yet, and the convention below still stands for endpoints that will.
 
-The `Home` page is still deliberately plain — it exists to prove the data path works, not as a design.
+**There is no landing page.** `/` is a `<Navigate to="/my-groups" replace />` inside the gated tree — the club-facing default view is your own mailing lists, and the header wordmark points there too. It used to be `pages/Home.tsx`, a backend-status readout that existed to prove the data path worked; that is proven, so the page and the `GET /api/healthz` chain behind it (`lib/request/getHealthz.ts`, `hooks/useHealthz.ts`) are gone. `api.test.ts` still uses the string `/api/healthz` as an arbitrary path, which is all it ever needed. `replace` matters: without it the back button lands on `/` and bounces forward again. The redirect never runs signed out, because `ProtectedRoute` renders `LoginGate` in place of `<Outlet />` and the `<Navigate>` element is never mounted.
 
 ## Commands
 

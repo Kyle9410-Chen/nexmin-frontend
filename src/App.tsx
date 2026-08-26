@@ -1,5 +1,4 @@
-import { Routes, Route } from "react-router";
-import Home from "@/pages/Home";
+import { Routes, Route, Navigate } from "react-router";
 import Users from "@/pages/Users";
 import Profile from "@/pages/Profile";
 import Help from "@/pages/Help";
@@ -17,7 +16,9 @@ export default function App() {
           rather than being redirected. */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Home />} />
+          {/* No landing page of its own: the default view is the caller's
+              own mailing lists. */}
+          <Route path="/" element={<Navigate to="/my-groups" replace />} />
           <Route path="/health" element={<div>Health Check</div>} />
           <Route path="/users" element={<Users />} />
           <Route path="/profile" element={<Profile />} />
