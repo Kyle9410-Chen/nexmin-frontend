@@ -194,6 +194,80 @@ describe("MemberTable", () => {
         name: `Change role for ${ALICE.email}`,
       }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: `Remove ${ALICE.email} from this group`,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("deletes only the member an admin confirms, and drops the row", async () => {
+    setAccessToken(makeFakeJwt({ role: "admin" }));
+    const list = answerMembers([
+      ALICE,
+      { ...ALICE, id: "m2", email: "bob@gmail.com" },
+    ]);
+
+    let deleted: string | undefined;
+    server.use(
+      http.delete(
+        `${BASE}/api/groups/:groupKey/members/:memberKey`,
+        ({ params }) => {
+          deleted = String(params.memberKey);
+          list.splice(0, 1);
+          return new HttpResponse(null, { status: 204 });
+        },
+      ),
+    );
+
+    renderWithProviders(<MemberTable groupKey={GROUP_KEY} />);
+
+    await userEvent.click(
+      (
+        await screen.findAllByRole("button", {
+          name: `Remove ${ALICE.email} from this group`,
+        })
+      )[0],
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Remove" }),
+    );
+
+    await waitFor(() => expect(deleted).toBe(ALICE.email));
+    await waitFor(() =>
+      expect(screen.queryByText(ALICE.email)).not.toBeInTheDocument(),
+    );
+    // The other member is untouched.
+    expect(screen.getAllByText("bob@gmail.com")).not.toHaveLength(0);
+  });
+
+  it("leaves the member in place when the removal is cancelled", async () => {
+    setAccessToken(makeFakeJwt({ role: "admin" }));
+    answerMembers();
+
+    let called = false;
+    server.use(
+      http.delete(`${BASE}/api/groups/:groupKey/members/:memberKey`, () => {
+        called = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderWithProviders(<MemberTable groupKey={GROUP_KEY} />);
+
+    await userEvent.click(
+      (
+        await screen.findAllByRole("button", {
+          name: `Remove ${ALICE.email} from this group`,
+        })
+      )[0],
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Cancel" }),
+    );
+
+    expect(called).toBe(false);
+    expect(screen.getAllByText(ALICE.email)).not.toHaveLength(0);
   });
 
   it("surfaces the problem+json detail when the backend refuses the change", async () => {
@@ -232,6 +306,47 @@ describe("MemberTable", () => {
     expect(
       await screen.findByText("insufficient permissions"),
     ).toBeInTheDocument();
+  });
+
+  it("puts the row back when the removal is refused", async () => {
+    setAccessToken(makeFakeJwt({ role: "admin" }));
+    answerMembers();
+
+    server.use(
+      http.delete(`${BASE}/api/groups/:groupKey/members/:memberKey`, () =>
+        HttpResponse.json(
+          {
+            title: "Forbidden",
+            status: 403,
+            detail: "insufficient permissions",
+          },
+          {
+            status: 403,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        ),
+      ),
+    );
+
+    renderWithProviders(<MemberTable groupKey={GROUP_KEY} />);
+
+    await userEvent.click(
+      (
+        await screen.findAllByRole("button", {
+          name: `Remove ${ALICE.email} from this group`,
+        })
+      )[0],
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Remove" }),
+    );
+
+    // findAll, not find: sonner's store outlives a single render, so the
+    // role-refusal test's toast can still be on screen under its own id.
+    expect(
+      await screen.findAllByText("insufficient permissions"),
+    ).not.toHaveLength(0);
+    expect(screen.getAllByText(ALICE.email)).not.toHaveLength(0);
   });
 
   it("shows the error state when the member list fails to load", async () => {

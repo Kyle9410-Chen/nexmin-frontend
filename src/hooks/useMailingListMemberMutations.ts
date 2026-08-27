@@ -202,3 +202,66 @@ export function useUpdateMemberGroups() {
     },
   });
 }
+
+export interface RemoveMailingListMemberInput {
+  groupKey: string;
+  /** The member's email, or their immutable ID — the API takes either. */
+  memberKey: string;
+}
+
+/**
+ * Takes one member off one list, unlike `useRemoveRosterMember`, which takes
+ * them off every list the club has.
+ *
+ * A 404 here means the address is not a **direct** member of that group. The
+ * members table only ever lists direct members, so that is a stale row rather
+ * than a case to explain away — the `onSettled` invalidation corrects it.
+ */
+export function useRemoveMailingListMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: RemoveMailingListMemberInput) =>
+      removeGroupMember(input),
+    onMutate: async (input) => {
+      const rollback = await optimisticUpdate<MailingListMembersResponse>(
+        queryClient,
+        ["mailingList", input.groupKey, "members"],
+        (old) => {
+          const items = old.items.filter(
+            (member) => memberKeyOf(member) !== input.memberKey,
+          );
+          // Only count down for a row that was actually there, or a repeated
+          // removal would drift the count away from the list.
+          return {
+            items,
+            totalItems: old.totalItems - (old.items.length - items.length),
+          };
+        },
+      );
+
+      return {
+        id: toastId(`remove-member-${input.groupKey}-${input.memberKey}`),
+        rollback,
+      };
+    },
+    onSuccess: (_data, vars, ctx) => {
+      toast.success(`${vars.memberKey} removed from the list`, { id: ctx.id });
+    },
+    onError: (err, _vars, ctx) => {
+      ctx?.rollback();
+      toast.error(getErrMessage(err, "Failed to remove the member"), {
+        id: ctx?.id,
+      });
+    },
+    onSettled: (_data, _err, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: ["mailingList", vars.groupKey, "members"],
+      });
+      // The roster carries each person's group keys, and one of them just went.
+      queryClient.invalidateQueries({ queryKey: ["roster"] });
+      // And their own view of the same domain, if they were looking at it.
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}

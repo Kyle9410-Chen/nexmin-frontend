@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +26,8 @@ export interface MemberRowProps {
     member: MailingListMember,
     role: MailingListMemberRole,
   ) => void;
+  /** Same admin gate as the role control: DELETE is admin-only too. */
+  onRemove: (member: MailingListMember) => void;
 }
 
 /**
@@ -53,8 +55,35 @@ function MemberIdentity({ member }: { member: MailingListMember }) {
   );
 }
 
+/**
+ * Takes this one member off this one list. Confirmation lives in the dialog the
+ * table owns, so the button only reports the intent.
+ */
+function RemoveControl({
+  member,
+  canEdit,
+  onRemove,
+}: Pick<MemberRowProps, "member" | "canEdit" | "onRemove">) {
+  if (!canEdit) return null;
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={`Remove ${memberKeyOf(member)} from this group`}
+      onClick={() => onRemove(member)}
+    >
+      <UserMinus className="size-4" />
+    </Button>
+  );
+}
+
 /** Identical on both breakpoints, so it lives in one place. */
-function RoleControl({ member, canEdit, onRoleChange }: MemberRowProps) {
+function RoleControl({
+  member,
+  canEdit,
+  onRoleChange,
+}: Pick<MemberRowProps, "member" | "canEdit" | "onRoleChange">) {
   // No pending state: the new role is already on screen optimistically, so a
   // spinner over it would only hide the answer.
   if (!canEdit) {
@@ -103,6 +132,9 @@ export default function MemberRow(props: MemberRowProps) {
       <TableCell>
         <RoleControl {...props} />
       </TableCell>
+      <TableCell className="text-right">
+        <RemoveControl {...props} />
+      </TableCell>
     </TableRow>
   );
 }
@@ -117,8 +149,9 @@ export function MemberMobileRow(props: MemberRowProps) {
       <span className="min-w-0 flex-1 font-medium">
         <MemberIdentity member={props.member} />
       </span>
-      <span className="shrink-0">
+      <span className="flex shrink-0 items-center gap-1">
         <RoleControl {...props} />
+        <RemoveControl {...props} />
       </span>
     </div>
   );

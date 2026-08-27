@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -14,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import MemberRow, { MemberMobileRow } from "@/components/mailingList/MemberRow";
+import RemoveMemberDialog from "@/components/mailingList/RemoveMemberDialog";
 import { useMailingListMembers } from "@/hooks/useMailingListMembers";
 import {
   findGroupByKey,
@@ -49,11 +51,21 @@ export default function MemberTable({ groupKey }: MemberTableProps) {
 
   const { mutate: updateRole } = useUpdateMailingListMemberRole();
 
+  // Kept on the table rather than per row so the confirmation is mounted once,
+  // and the member is held after closing so the copy does not blank out during
+  // the dialog's close animation.
+  const [removing, setRemoving] = useState<MailingListMember | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+
   const rowProps = (member: MailingListMember) => ({
     member,
     canEdit,
     onRoleChange: (target: MailingListMember, role: MailingListMemberRole) =>
       updateRole({ groupKey, memberKey: memberKeyOf(target), role }),
+    onRemove: (target: MailingListMember) => {
+      setRemoving(target);
+      setRemoveOpen(true);
+    },
   });
 
   const members = data?.items ?? [];
@@ -104,8 +116,11 @@ export default function MemberTable({ groupKey }: MemberTableProps) {
               <Table className="min-w-[420px] table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[60%]">Member</TableHead>
-                    <TableHead className="w-[40%]">Role</TableHead>
+                    <TableHead className="w-[55%]">Member</TableHead>
+                    <TableHead className="w-[35%]">Role</TableHead>
+                    <TableHead className="w-[10%]">
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -118,6 +133,14 @@ export default function MemberTable({ groupKey }: MemberTableProps) {
           </>
         )}
       </CardContent>
+
+      <RemoveMemberDialog
+        member={removing}
+        groupKey={groupKey}
+        groupName={group?.displayName || group?.name || groupKey}
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+      />
     </Card>
   );
 }
